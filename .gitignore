@@ -2,3 +2,9 @@
 /kaggle/input/sample_submission.csv
 /kaggle/input/test.parquet
 /kaggle/input/train.parquet
+X_train_spectra.npz
+.syncthing.*
+casmi_candidates_val.parquet
+casmi_split.parquet
+casmi_folds.parquet
+/archive/
