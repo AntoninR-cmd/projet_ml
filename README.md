@@ -24,13 +24,21 @@ Les données (~2,8 Go) ne sont pas versionnées dans git. Pour les télécharger
 
 1. Accepter les règles de la compétition sur Kaggle.
 2. Configurer une clé d'API Kaggle (*Settings → API → Create New Token* sur kaggle.com), ou lancer `python -c "import kagglehub; kagglehub.login()"`.
-3. Télécharger les fichiers dans `kaggle/input/` :
+3. Télécharger les fichiers dans `data/raw/` :
 
 ```bash
-python -c "import kagglehub; kagglehub.competition_download('enveda-CASMI26-molecule-id-mass-spectra', output_dir='kaggle/input')"
+python -c "import kagglehub; kagglehub.competition_download('enveda-CASMI26-molecule-id-mass-spectra', output_dir='data/raw')"
 ```
 
 On obtient `train.parquet`, `test.parquet` et `sample_submission.csv`.
+
+Organisation du dossier `data/` (chemins définis dans `src/casmi/config.py`) :
+
+```
+data/
+├── raw/         # données Kaggle brutes, jamais modifiées
+└── processed/   # fichiers produits par le pipeline (meta.parquet, split.parquet…)
+```
 
 ## Tests
 
