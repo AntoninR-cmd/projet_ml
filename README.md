@@ -13,6 +13,7 @@ python3 -m venv .venv
 source .venv/bin/activate        # Windows : .venv\Scripts\activate
 pip install -r requirements.txt
 pip install -e .
+nbstripout --install             # retire les sorties des notebooks à chaque commit
 ```
 
 Dans VS Code ou Jupyter, sélectionnez ensuite l'interpréteur / le noyau `.venv`.
