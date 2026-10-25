@@ -49,6 +49,8 @@ PyTorch (version CPU) est installé dans le `.venv` de B pour le squelette `src/
 **À A (données et features) :**
 - `collision_energy_ev` est une **liste** par spectre : 67 % ont une seule énergie, 19,5 % plusieurs (acquisition « étagée »), 13 % aucune. À prendre en compte dans `meta_features`.
 - `instrument_type` a des libellés hétérogènes à normaliser : `timsTOF` (45 % des spectres), `Orbitrap` et `orbitrap`, `QTOF`, `qtof`, `qTof`, `LC-ESI-QTOF`…
+- **Valeurs manquantes des métadonnées**, à traiter dans `meta_features` : `base_peak_intensity` manque pour 45,8 % des spectres, `collision_energy_ev` pour 13,3 %, `collision_energy_orig` pour 12,6 % et `instrument_type` pour 1,3 %. Les colonnes `adduct`, `precursor_mz`, `normalized_smiles`, `inchikey14`, `ionization_mode` et les pics sont complètes.
+- **Attention aux faux manquants** de `instrument_type` : 1 645 spectres ont un texte au lieu d'une vraie valeur manquante (`"nan"` : 972, `"N/A"` : 376, chaîne vide : 297). `isna()` ne les voit pas : il faut les convertir en vraies valeurs manquantes avant tout traitement.
 - Étiquettes douteuses pour le filtre `keep` : voir les conclusions de `notebooks/B/01_masse_neutre.ipynb`.
 - Question à trancher : faut-il un split par scaffold en plus du split par molécule ? La validation est déjà exigeante : Tanimoto maximal médian de 0,65 avec le train, et seulement 6,7 % de quasi-jumeaux (≥ 0,9).
 
