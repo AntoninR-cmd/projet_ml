@@ -29,3 +29,29 @@ Une molécule a souvent plusieurs spectres, donc plusieurs masses neutres. Prend
 
 - **Chemins** : les données brutes sont lues dans le dossier donné par la variable d'environnement `CASMI_DATA_DIR` (à défaut, `kaggle/input/`), et les fichiers produits sont écrits dans son sous-dossier `processed/` (à défaut, `data/processed/`). À reprendre dans `config.py`.
 - **Split de validation** : 10 % des molécules tirées avec `np.random.default_rng(42)` parmi les `inchikey14` triés, et 2 000 d'entre elles pour `dev`. À remplacer par `split.parquet`.
+
+## Sprint 2
+
+### Fingerprints de référence : Morgan, rayon 2, 2048 bits, binaire — proposée par B
+
+- Paramètres `FP_RADIUS = 2` et `FP_SIZE = 2048` dans `src/casmi/fingerprints.py`, à reporter dans `config.py`.
+- `catalog_fp.npy` : matrice `(275 810, 2048)` en `uint8`, ligne `i` = `cat_idx` `i`. Elle pèse 565 Mo et reste hors git, dans le même dossier que `catalog.parquet`. `load_catalog_fps(mmap=True)` évite de la charger entièrement en mémoire.
+- Une molécule a en moyenne 46 bits à 1 (2,25 %) : il faudra suivre le Tanimoto, la précision et le rappel des bits, pas l'exactitude.
+
+Détails : `notebooks/B/03_analyse_fingerprints.ipynb`.
+
+### PyTorch — à discuter
+
+PyTorch (version CPU) est installé dans le `.venv` de B pour le squelette `src/casmi/models/mlp.py`. Le README prévoyait de l'ajouter au sprint « modèle » : la ligne `torch` de `requirements.txt` peut être activée. Les tests du MLP sont ignorés automatiquement si PyTorch n'est pas installé.
+
+## Points à transmettre
+
+**À A (données et features) :**
+- `collision_energy_ev` est une **liste** par spectre : 67 % ont une seule énergie, 19,5 % plusieurs (acquisition « étagée »), 13 % aucune. À prendre en compte dans `meta_features`.
+- `instrument_type` a des libellés hétérogènes à normaliser : `timsTOF` (45 % des spectres), `Orbitrap` et `orbitrap`, `QTOF`, `qtof`, `qTof`, `LC-ESI-QTOF`…
+- Étiquettes douteuses pour le filtre `keep` : voir les conclusions de `notebooks/B/01_masse_neutre.ipynb`.
+- Question à trancher : faut-il un split par scaffold en plus du split par molécule ? La validation est déjà exigeante : Tanimoto maximal médian de 0,65 avec le train, et seulement 6,7 % de quasi-jumeaux (≥ 0,9).
+
+**À C (évaluation) :**
+- Combiner les masses des spectres d'une molécule par la médiane (voir plus haut).
+- Pour l'oracle : dans une fenêtre de 10 ppm, seules 1,5 % des molécules `dev` ont un candidat au fingerprint identique, et le concurrent le plus proche est à 0,34 de Tanimoto en médiane. L'oracle devrait donc être proche du maximum.

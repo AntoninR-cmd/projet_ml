@@ -2,7 +2,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from casmi.catalog import build_catalog, choose_smiles, get_candidates, load_catalog, mass_windows, smiles_properties
+from casmi.catalog import (
+    build_catalog,
+    choose_smiles,
+    get_candidates,
+    load_catalog,
+    mass_windows,
+    smiles_properties,
+    smiles_to_inchikey14,
+)
 
 CAFFEINE = "Cn1cnc2c1c(=O)n(C)c(=O)n2C"
 ACETIC_ACID = "CC(=O)O"
@@ -20,6 +28,15 @@ def test_smiles_properties(n_jobs):
     assert props.loc[ACETIC_ACID, "exact_mass"] == pytest.approx(60.021129, abs=1e-6)
     assert pd.isna(props.loc["pas un smiles", "formula"])
     assert np.isnan(props.loc["pas un smiles", "exact_mass"])
+
+
+@pytest.mark.parametrize("n_jobs", [1, 2])
+def test_smiles_to_inchikey14(n_jobs):
+    keys = smiles_to_inchikey14([CAFFEINE, "pas un smiles", ACETIC_ACID], n_jobs=n_jobs)
+    # InChIKey de la caféine : RYYVLZVUVIJVGH-UHFFFAOYSA-N
+    assert keys[CAFFEINE] == "RYYVLZVUVIJVGH"
+    assert keys[ACETIC_ACID] == "QTBSBXVTEAMEQO"
+    assert pd.isna(keys["pas un smiles"])
 
 
 def test_choose_smiles_most_frequent_then_alphabetical():

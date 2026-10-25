@@ -38,6 +38,41 @@ CATALOG_PATH = PROCESSED_DIR / "catalog.parquet"
 CATALOG_COLUMNS = ["cat_idx", "inchikey14", "smiles", "formula", "exact_mass"]
 
 
+def map_chunks(func, items, n_jobs: int = N_JOBS, chunksize: int = 5_000) -> list:
+    """Applique func à des paquets de chunksize éléments, répartis entre n_jobs processus.
+
+    func reçoit une liste et renvoie une liste de même longueur ; les résultats sont
+    remis bout à bout, dans l'ordre de items. Sous Windows, func doit être définie
+    dans un module importable (pas dans un notebook).
+    """
+    items = list(items)
+    chunks = [items[i : i + chunksize] for i in range(0, len(items), chunksize)]
+    if n_jobs == 1:
+        return [r for chunk in chunks for r in func(chunk)]
+    with ProcessPoolExecutor(max_workers=n_jobs) as executor:
+        return [r for part in executor.map(func, chunks) for r in part]
+
+
+def _inchikey14_chunk(smiles: list[str]) -> list[str | None]:
+    RDLogger.DisableLog("rdApp.*")
+    out = []
+    for s in smiles:
+        mol = Chem.MolFromSmiles(s)
+        key = Chem.MolToInchiKey(mol) if mol is not None else ""
+        out.append(key[:14] if key else None)
+    return out
+
+
+def smiles_to_inchikey14(smiles, n_jobs: int = N_JOBS) -> pd.Series:
+    """Les 14 premiers caractères de l'InChIKey de chaque SMILES, recalculés par RDKit.
+
+    Renvoie une Series indexée par les SMILES (None si RDKit ne sait pas les lire).
+    """
+    smiles = list(smiles)
+    keys = map_chunks(_inchikey14_chunk, smiles, n_jobs, chunksize=2_000)
+    return pd.Series(keys, index=pd.Index(smiles, name="smiles"), name="inchikey14")
+
+
 def _properties_chunk(smiles: list[str]) -> list[tuple[str | None, float]]:
     # Exécutée dans chaque processus : RDKit signale les SMILES invalides sur stderr
     RDLogger.DisableLog("rdApp.*")
@@ -59,14 +94,7 @@ def smiles_properties(smiles, n_jobs: int = N_JOBS, chunksize: int = 5_000) -> p
     lire le SMILES).
     """
     smiles = list(smiles)
-    chunks = [smiles[i : i + chunksize] for i in range(0, len(smiles), chunksize)]
-
-    if n_jobs == 1:
-        results = [r for chunk in chunks for r in _properties_chunk(chunk)]
-    else:
-        with ProcessPoolExecutor(max_workers=n_jobs) as executor:
-            results = [r for part in executor.map(_properties_chunk, chunks) for r in part]
-
+    results = map_chunks(_properties_chunk, smiles, n_jobs, chunksize)
     return pd.DataFrame(
         results, columns=["formula", "exact_mass"], index=pd.Index(smiles, name="smiles")
     )
