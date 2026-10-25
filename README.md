@@ -12,6 +12,7 @@ cd projet_ml
 python3 -m venv .venv
 source .venv/bin/activate        # Windows : .venv\Scripts\activate
 pip install -r requirements.txt
+pip install -e .
 ```
 
 Dans VS Code ou Jupyter, sélectionnez ensuite l'interpréteur / le noyau `.venv`.
@@ -23,7 +24,16 @@ Dans VS Code ou Jupyter, sélectionnez ensuite l'interpréteur / le noyau `.venv
 Les données (~2,8 Go) ne sont pas versionnées dans git. Pour les télécharger :
 
 1. Accepter les règles de la compétition sur Kaggle.
-2. Configurer une clé d'API Kaggle (*Settings → API → Create New Token* sur kaggle.com), ou lancer `python -c "import kagglehub; kagglehub.login()"`.
+2. Enregistrer une clé d'API Kaggle : sur kaggle.com, *Settings → API → Generate New Token*, puis coller le jeton dans `~/.kaggle/access_token` :
+
+   ```bash
+   mkdir -p ~/.kaggle
+   nano ~/.kaggle/access_token        # coller le jeton, enregistrer
+   chmod 600 ~/.kaggle/access_token
+   python -c "import kagglehub; print(kagglehub.whoami())"   # doit afficher votre nom d'utilisateur
+   ```
+
+   (`kagglehub.login()` ne garde la clé qu'en mémoire : elle est perdue à la fin de la commande.)
 3. Télécharger les fichiers dans `data/raw/` :
 
 ```bash
