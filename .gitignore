@@ -8,3 +8,5 @@ casmi_candidates_val.parquet
 casmi_split.parquet
 casmi_folds.parquet
 /archive/
+__pycache__/
+.pytest_cache/
