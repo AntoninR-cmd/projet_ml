@@ -1,12 +1,25 @@
-/kaggle/input/.complete/
-/kaggle/input/sample_submission.csv
-/kaggle/input/test.parquet
-/kaggle/input/train.parquet
-X_train_spectra.npz
-.syncthing.*
-casmi_candidates_val.parquet
-casmi_split.parquet
-casmi_folds.parquet
+# --- Environnements virtuels (chacun recrée le sien avec requirements.txt) ---
+.venv*/
+
+# --- Données : trop lourdes pour git, chacun les télécharge ou les régénère ---
+/kaggle/
+/data/
+*.parquet
+*.npy
+*.npz
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Fichiers personnels / divers ---
 /archive/
 __pycache__/
 .pytest_cache/
+.syncthing.*
+Résumé_chatGpt.md
