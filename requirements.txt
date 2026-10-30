@@ -1,0 +1,22 @@
+# --- Données ---
+pandas>=3.0
+pyarrow>=26.0
+numpy>=2.5
+scipy>=1.18
+kagglehub>=1.0
+
+# --- Chimie ---
+rdkit==2026.9.1         # épinglé : les fingerprints doivent être identiques chez tous
+
+# --- Machine learning ---
+scikit-learn>=1.9
+# torch                 # à activer au sprint modèle (version CPU/GPU selon la machine)
+
+# --- Visualisation ---
+matplotlib>=3.11
+tqdm>=4.70
+
+# --- Outils de développement ---
+pytest
+nbstripout
+ipykernel
