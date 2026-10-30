@@ -19,5 +19,7 @@ __pycache__/
 
 # --- Fichiers personnels / divers ---
 /archive/
+__pycache__/
+.pytest_cache/
 .syncthing.*
 Résumé_chatGpt.md
