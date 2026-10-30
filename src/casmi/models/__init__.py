@@ -1,0 +1,1 @@
+"""Modèles spectre → fingerprint."""
