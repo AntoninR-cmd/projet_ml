@@ -21,3 +21,7 @@ SUBMISSION_PATH = DATA_RAW / "sample_submission.csv"
 
 # --- Reproductibilité ---
 SEED = 42
+
+# --- Fingerprints de Morgan (décision de B, sprint 2) ---
+FP_RADIUS = 2  # rayon 2 ≈ ECFP4
+FP_SIZE = 2048  # nombre de bits
