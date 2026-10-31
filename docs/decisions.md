@@ -70,6 +70,28 @@ Détails : `notebooks/A/02_valeurs_manquantes.ipynb` et la section 3 de `docs/di
 
 Détails : `notebooks/A/03_train_vs_test.ipynb`.
 
+### Nettoyage : `meta.parquet`, `keep` et `query_ok` — proposée par A
+
+`data/processed/meta.parquet` (produit par `python -m casmi.clean`, lu avec `load_clean_meta()`) contient une ligne par spectre du train, avec tous les `row_id`. Ses colonnes sont celles du contrat d'interfaces, plus **deux filtres** :
+- **`keep`** : spectre fiable pour l'**entraînement** (aucune règle déclenchée) ;
+- **`query_ok`** : spectre utilisable comme **requête de validation**. Seules les règles qui n'utilisent pas la vraie structure comptent, sinon la validation deviendrait plus facile que le test. **Ne jamais filtrer les requêtes avec `keep`.** L'ajout de cette colonne modifie le contrat d'interfaces : à valider en réunion.
+
+| Règle | Ce qu'elle repère | Structure ? | Spectres | En plus des précédentes |
+|---|---|---|---|---|
+| `adduct_inconnu` | adduct non interprétable (`[Cat]2+`) | non | 15 | 15 |
+| `charge_contre_mode` | charge de l'adduct opposée au mode d'ionisation, physiquement impossible | non | 6 087 | 6 087 |
+| `erreur_masse` | masse déduite du précurseur à plus de **0,75 Da** de la masse exacte du SMILES | oui | 25 053 | 21 611 |
+| `adduct_douteux` | `[M-CH3]-` : précurseurs dispersés, sans formule possible | non | 619 | 619 |
+| **Total** | | | | **28 332 (1,12 %)** |
+
+- **Seuil de 0,75 Da** : une erreur d'adduct décale la masse d'au moins un hydrogène (1,008 Da), alors qu'un précurseur arrondi à l'unité (31 % des `precursor_mz` des quadripôles) s'écarte d'au plus 0,5 Da. Les appareils à haute résolution se trompent de quelques ppm (Makarov *et al.*, *Anal. Chem.* 2006 ; Kind & Fiehn, *BMC Bioinformatics* 2006). Le seuil tombe dans le creux de la distribution des écarts. Un seuil de 1 000 ppm donne presque le même résultat (98 % de spectres en commun), mais écarte à tort 550 précurseurs arrondis de petites molécules et laisse passer 85 erreurs sur des molécules de plus de 1 000 Da.
+- L'écart est recalculé avec `compute_neutral_masses` et la masse exacte RDKit, et non lu dans `precursor_error_ppm`, décalée d'un électron ou d'un hydrogène pour la plupart des adducts (B1.1).
+- **Par bibliothèque** : gnps 4,8 %, riken 4,0 %, drug_plus 3,5 %, mona 2,3 %, massbank 1,6 %, les autres moins de 0,2 %. enveda-180 n'est pas touchée.
+- La règle de masse remplace une liste noire pour `[M-H5O3]+` : elle écarte les 214 spectres décalés de −1,418 Da et garde les 16 dont la masse est juste.
+- **Hors `keep`** : les spectres de moins de 10 pics et les adducts dimères ont une étiquette juste. Les retirer de l'entraînement est à tester en A4.1 (A1.3).
+
+Détails : `notebooks/A/04_nettoyage.ipynb`.
+
 ### Provisoire, en attendant A
 
 - **Chemins** : les données brutes sont lues dans le dossier donné par la variable d'environnement `CASMI_DATA_DIR` (à défaut, `kaggle/input/`), et les fichiers produits sont écrits dans son sous-dossier `processed/` (à défaut, `data/processed/`). À reprendre dans `config.py`.
