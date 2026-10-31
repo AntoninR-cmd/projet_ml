@@ -166,6 +166,31 @@ Détails : `notebooks/A/05_binning.ipynb`.
 
 Détails : `notebooks/A/06_meta_features.ipynb`.
 
+### Matrices pour les premiers modèles : `dev` et `train_sample` — proposée par A
+
+`python -m casmi.matrices` construit deux sous-ensembles (environ 1 min 30, 5,3 Go de mémoire au maximum) :
+
+| Sous-ensemble | Spectres | Molécules | Filtre | Rôle | Taille sur disque |
+|---|---|---|---|---|---|
+| `dev` | 18 899 | 2 000 | `query_ok` | évaluer | 8 Mo |
+| `train_sample` | 200 000 (tirés avec la graine 42) | 108 705 | split `train` et `keep` | entraîner | 93 Mo |
+
+- **Fichiers, alignés ligne à ligne** dans `data/processed/` :
+  - `X_{nom}.npz` : les spectres binés (creux, 10 000 colonnes, norme 1) ;
+  - `meta_{nom}_onehot.parquet` et `meta_{nom}_decompose.parquet` : les features de métadonnées des deux encodages de l'adduct ;
+  - `rows_{nom}.parquet` : `row_id` et `inchikey14`.
+- **Spectres et métadonnées sont séparés**, car le MLP prend les deux alors que la similarité cosinus ne compare que les spectres :
+  - `load_matrices(nom)` renvoie `(X, rows, noms des colonnes)` avec X = [spectres | métadonnées] ;
+  - `load_matrices(nom, meta=False)` renvoie les spectres seuls ;
+  - `load_matrices(nom, adduct_encoding="decompose")` utilise l'autre encodage.
+  - La fonction vérifie l'alignement des `row_id`.
+- **Les encodeurs de métadonnées** sont appris sur tout le split `train` (`keep`) et sauvegardés. `load_encoder("onehot")` les recharge, pour encoder plus tard toute la validation et le test avec exactement les mêmes catégories.
+- **Vérifications** : aucune molécule commune à `dev` et `train_sample` ; un recalcul indépendant donne des lignes identiques. 3 spectres de `dev` et 111 de `train_sample` n'ont aucun pic sous 1 000 m/z : leur vecteur de spectre est nul, mais ils gardent leurs métadonnées.
+- **Mémoire** : `train_sample` occupe 156 Mo en mémoire. Tout le split `train` occuperait environ 1,8 Go en creux, contre 90 Go en dense.
+- **Changement par rapport au contrat d'interfaces** : le contrat prévoyait `meta_features(df) -> np.ndarray`. La fonction devient `meta_features(df, encoder) -> pd.DataFrame`, car l'encodeur doit être appris sur le train seulement. Les noms des colonnes servent à interpréter les features, et `.to_numpy()` donne le tableau.
+
+Détails : `notebooks/A/07_matrices.ipynb`.
+
 ### PyTorch — à discuter
 
 PyTorch (version CPU) est installé dans le `.venv` de B pour le squelette `src/casmi/models/mlp.py`. Le README prévoyait de l'ajouter au sprint « modèle » : la ligne `torch` de `requirements.txt` peut être activée. Les tests du MLP sont ignorés automatiquement si PyTorch n'est pas installé.
