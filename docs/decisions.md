@@ -126,6 +126,46 @@ Détails : `notebooks/B/03_analyse_fingerprints.ipynb`.
 
 Détails : `notebooks/A/05_binning.ipynb`.
 
+### Features de métadonnées : 31 ou 26 colonnes — proposée par A
+
+`fit_meta_encoder(train, adduct_encoding)` apprend les encodages sur le train seulement, puis `meta_features(df, encoder)` les applique à n'importe quel tableau (train, validation, test). Le résultat est un DataFrame float32 sans NA, dont les noms de colonnes sont les noms des features, toujours dans le même ordre (`src/casmi/features.py`).
+
+| Feature | Encodage | Raison |
+|---|---|---|
+| `mode_positif` | 1 si mode positif, sinon 0 | un même fragment n'a pas le même sens dans les deux modes |
+| `masse_neutre` | masse neutre (`compute_neutral_masses`) / 1 000 | taille de la molécule ; repli sur `precursor_mz` si l'adduct n'est pas interprétable |
+| `log_num_peaks` | `log10` du nombre de pics | de 1 à 56 400 pics ; compté depuis `ms2_mzs` dans le test, qui n'a pas de colonne `num_peaks` |
+| `ce_min`, `ce_max`, `ce_mean` | énergie de collision en eV / 100 | résumé de la liste ; NA : règle NCE → eV, puis gradient boosting appris sur le train (imputeur retenu en A1.2) |
+| `ce_manquante` | 1 si l'énergie est imputée par le modèle | 12,5 % du train (`keep`), 0 % du test visible |
+| adduct, `"onehot"` (par défaut) | *one-hot* des 16 adducts qui ont au moins 1 000 spectres, plus `adduct=autre` (17 colonnes) | 99,8 % du train, 100 % du test visible ; un adduct inconnu tombe dans « autre » |
+| adduct, `"decompose"` | `adduct_nM`, `adduct_charge`, le nombre de chacun des 8 groupes fréquents, `adduct_groupe=autre`, `adduct_inconnu` (12 colonnes) | les adducts qui partagent un groupe (Na, dimère…) partagent leurs colonnes ; voir ci-dessous |
+| `instrument=…` | *one-hot* des 6 familles d'instrument, plus `instrument=Inconnu` | 1,4 % de NA : une catégorie à part plutôt qu'un imputeur qui se trompe souvent |
+
+- Échelles fixes (/ 1 000, / 100, `log10`) : elles ramènent les valeurs autour de 0-1 sans rien apprendre des données.
+- Exclues : les fuites (`normalized_smiles`, `inchikey14`, `precursor_error_ppm`), `ingest_lib` (absente du test) et `base_peak_intensity` (proposée exclue, à confirmer). Un test vérifie que ces colonnes ne changent pas le résultat.
+- Coût : environ 20 s pour apprendre l'encodeur et 20 s pour encoder les 2,26 millions de spectres `keep` du split `train`.
+- À comparer en A4.1 : imputer l'énergie ou retirer les spectres sans énergie de l'entraînement ; les deux encodages de l'adduct (protocole ci-dessous).
+
+**L'adduct décomposé.** `adduct_groups` décrit un adduct par le nombre de molécules M, sa charge signée et le nombre de chaque groupe ajouté (positif) ou perdu (négatif) : `[M-H]-` → nM = 1, charge = -1, H = -1 ; `[2M+Na]+` → nM = 2, charge = +1, Na = 1 ; `[M+CH2O2-H]-` → nM = 1, charge = -1, CH2O2 = 1, H = -1.
+- Les groupes sont des blocs chimiques, pas des atomes : le formiate (CH2O2) s'accroche et part en entier.
+- Un terme d'un seul élément compte ses atomes (`+Na2` = 2 Na). Les autres sont écrits dans l'ordre de Hill, pour que `NH4` et `H4N` soient le même groupe.
+- Groupes gardés (au moins 1 000 spectres du train) : H, Na, CH2O2, H4N, Cl, H2O, K, C2H4O2. Les groupes plus rares sont comptés dans `adduct_groupe=autre` (0,03 % du train).
+- L'imputeur d'énergie est le même dans les deux cas : seules les colonnes d'adduct changent (vérifié par un test).
+
+**Protocole de comparaison des deux encodages (A4.1)** :
+1. **Une seule différence.** Les deux modèles ont le même split, les mêmes spectres d'entraînement (`train` et `keep`), le même binning, les mêmes autres features, le même modèle, les mêmes hyperparamètres et le même nombre d'époques. Seul `adduct_encoding` change. Chaque encodeur est appris sur le train seulement.
+2. **Évaluation sur `dev`** (requêtes `query_ok`), avec le MRR@25 de C. Jamais sur le test visible : ses molécules sont dans le train.
+3. **Bruit.** Chaque encodage est entraîné avec 3 graines. L'écart de MRR entre les deux encodages est encadré par un bootstrap apparié sur les molécules de `dev` (1 000 tirages des 2 000 molécules, mêmes molécules pour les deux encodages). On obtient un intervalle à 95 %.
+4. **Par sous-groupe**, car on n'attend pas le même effet partout :
+   - les adducts simples présents dans le test visible (`[M+H]+`, `[M-H]-`, `[M+CH2O2-H]-`, `[M+Na]+`, `[M+NH4]+`, `[M+K]+`, `[M+Cl]-`). C'est le cas qui compte pour la compétition ;
+   - les dimères et les adducts rares, là où la décomposition devrait aider ;
+   - les spectres timsTOF.
+5. **Confirmation** sur toute la validation, pour l'encodage retenu et l'autre.
+6. **Règle de décision proposée.** On garde `decompose` si son gain sur les adducts simples dépasse le bruit, c'est-à-dire si l'intervalle du bootstrap exclut 0 et si le gain est supérieur à l'écart entre graines. Sinon on garde `onehot`, l'encodage par défaut. Si la décomposition n'aide que sur les dimères et les adducts rares, on testera une version mixte : le *one-hot* plus `adduct_nM` et `adduct_charge`.
+7. **Pour A2.3.** Les features de métadonnées sont sauvegardées pour les deux encodages, à côté de la matrice des spectres binés, pour que la comparaison n'ait pas à tout recalculer.
+
+Détails : `notebooks/A/06_meta_features.ipynb`.
+
 ### PyTorch — à discuter
 
 PyTorch (version CPU) est installé dans le `.venv` de B pour le squelette `src/casmi/models/mlp.py`. Le README prévoyait de l'ajouter au sprint « modèle » : la ligne `torch` de `requirements.txt` peut être activée. Les tests du MLP sont ignorés automatiquement si PyTorch n'est pas installé.
