@@ -107,6 +107,25 @@ Détails : `notebooks/A/04_nettoyage.ipynb`.
 
 Détails : `notebooks/B/03_analyse_fingerprints.ipynb`.
 
+### Binning des spectres : 0,1 Da jusqu'à 1 000 m/z — proposée par A
+
+`bin_spectrum` (un spectre, vecteur dense) et `bin_spectra` (une liste de spectres, matrice creuse CSR) dans `src/casmi/features.py`. Choix par défaut, tous réglables :
+
+| Choix | Valeur | Raison |
+|---|---|---|
+| Plage | 0 à `MAX_MZ = 1000` | 98,7 % des pics du train, 100 % du test visible (m/z max 460) |
+| Largeur | `BIN_WIDTH = 0.1` Da, soit 10 000 cases | 0,01 Da donnerait 100 000 cases (environ 200 millions de poids pour la première couche d'un MLP) ; 1 Da confondrait des fragments de formules différentes. L'erreur d'un timsTOF (environ 0,002 Da) reste bien plus petite qu'une case |
+| Agrégation | maximum | des pics proches dans une case sont en général le même fragment (38 % des pics du train partagent leur case à 0,1 Da) ; la somme gonflerait les amas de bruit |
+| Intensités | racine carrée | 81 % des pics du train font moins de 1 % du pic principal ; la racine leur donne plus de poids sans faire remonter le bruit autant qu'un logarithme |
+| Normalisation | norme L2 = 1 | le produit scalaire devient la similarité cosinus |
+
+- Pics ignorés : m/z NaN, négatif ou ≥ `MAX_MZ`, intensité NaN ou nulle. 22 spectres sur 50 000 n'ont aucun pic sous 1 000 et donnent un vecteur nul.
+- Taille : 96 cases non nulles par spectre en moyenne, soit environ 2 Go en creux pour tout le train, contre 102 Go en dense.
+- Option : `neutral_losses` calcule les pertes neutres (`precursor_mz − m/z`), à biner comme un second vecteur.
+- À comparer en A4.1 : la largeur (0,01, 0,1 et 1 Da), la transformation (racine, logarithme, aucune) et l'ajout des pertes neutres.
+
+Détails : `notebooks/A/05_binning.ipynb`.
+
 ### PyTorch — à discuter
 
 PyTorch (version CPU) est installé dans le `.venv` de B pour le squelette `src/casmi/models/mlp.py`. Le README prévoyait de l'ajouter au sprint « modèle » : la ligne `torch` de `requirements.txt` peut être activée. Les tests du MLP sont ignorés automatiquement si PyTorch n'est pas installé.
