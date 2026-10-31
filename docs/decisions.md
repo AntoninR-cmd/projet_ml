@@ -35,6 +35,17 @@ Une molécule a souvent plusieurs spectres, donc plusieurs masses neutres. Prend
 
 Détails : `notebooks/A/01_split.ipynb`.
 
+### Valeurs manquantes : imputeurs et stratégies à tester — proposée par A
+
+- Les NA dépendent de la bibliothèque, et le test visible n'en a aucun : l'imputation sert seulement à récupérer des spectres d'entraînement.
+- Les imputeurs ont été choisis en masquant des valeurs observées, au hasard et **par bibliothèque entière** (le vrai mécanisme des NA). Ils n'utilisent que des variables présentes dans le test, et ont été appris sur le split `train`.
+- `collision_energy_ev` : règle exacte `NCE × precursor_mz / 500` (11 064 NA reconstruits), puis un modèle de gradient boosting (15,3 eV d'erreur moyenne par bibliothèque masquée, contre 16,6 pour une médiane par instrument).
+- `instrument_type` : normalisation en 6 familles (`instrument_family`), puis un modèle pour les 1,4 % de NA.
+- `base_peak_intensity` : **aucun imputeur fiable**. Sur une bibliothèque jamais vue, l'erreur atteint un facteur 100, pire qu'une médiane. Il faut aussi se méfier de son NA : il révèle la bibliothèque.
+- À comparer en A4.1, avec le MRR@25 sur `dev`, puis sur toute la validation et sur timsTOF à part : supprimer ou imputer `base_peak_intensity` ; retirer de l'entraînement ou imputer les spectres sans énergie ou sans instrument.
+
+Détails : `notebooks/A/02_valeurs_manquantes.ipynb` et la section 3 de `docs/dictionnaire_donnees.md`.
+
 ### Provisoire, en attendant A
 
 - **Chemins** : les données brutes sont lues dans le dossier donné par la variable d'environnement `CASMI_DATA_DIR` (à défaut, `kaggle/input/`), et les fichiers produits sont écrits dans son sous-dossier `processed/` (à défaut, `data/processed/`). À reprendre dans `config.py`.
