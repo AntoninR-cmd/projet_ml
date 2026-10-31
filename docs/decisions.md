@@ -25,6 +25,16 @@ Détails : `notebooks/B/02_filtre_masse.ipynb`, section 3.
 
 Une molécule a souvent plusieurs spectres, donc plusieurs masses neutres. Prendre la médiane de ces masses fait passer le rappel à 10 ppm de 95,2 % (par spectre) à 98,6 % (par molécule), et protège contre un spectre isolé mal étiqueté.
 
+### Split figé par molécule — proposée par A
+
+- Une ligne par `inchikey14` dans `data/processed/split.parquet` (colonnes `inchikey14`, `split`, `dev`), produit par `python -m casmi.split` et lu avec `load_split()`.
+- Règle : les `inchikey14` du train sont triés, puis on tire 10 % des molécules pour `val` avec `np.random.default_rng(42)`, et 2 000 d'entre elles pour `dev`. C'est **exactement la règle provisoire de B** : le split est identique (vérifié), donc tous les chiffres déjà calculés par B restent valables.
+- Résultat : `train` 248 229 molécules (2 287 183 spectres), `val` 27 581 molécules (252 425 spectres), dont `dev` 2 000 molécules (18 945 spectres).
+- Les deux parties se ressemblent : 9,2 spectres par molécule en moyenne de chaque côté, et les parts des bibliothèques, des adducts et des modes d'ionisation diffèrent de moins de 0,5 point.
+- Pas de split par scaffold pour l'instant : d'après B, la validation est déjà exigeante (Tanimoto maximal médian de 0,65 avec le train). L'option reste ouverte au sprint 4.
+
+Détails : `notebooks/A/01_split.ipynb`.
+
 ### Provisoire, en attendant A
 
 - **Chemins** : les données brutes sont lues dans le dossier donné par la variable d'environnement `CASMI_DATA_DIR` (à défaut, `kaggle/input/`), et les fichiers produits sont écrits dans son sous-dossier `processed/` (à défaut, `data/processed/`). À reprendre dans `config.py`.
