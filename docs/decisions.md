@@ -46,6 +46,30 @@ Détails : `notebooks/A/01_split.ipynb`.
 
 Détails : `notebooks/A/02_valeurs_manquantes.ipynb` et la section 3 de `docs/dictionnaire_donnees.md`.
 
+### Train vs test : recommandations pour la validation — proposée par A
+
+**Constat.** Les 1 213 spectres du test visible sont des **copies exactes de spectres d'enveda-180** (timsTOF d'Enveda), retrouvés pic par pic. Pour leurs 400 molécules, les organisateurs ont écarté tous les adducts dimères (`[2M+…]`) et gardé environ 2 spectres sur 3 parmi les adducts simples. Le test visible ressemble donc à « enveda-180, adducts simples, environ 3 spectres par molécule ». On suppose que le test caché suit les mêmes règles, sans pouvoir le vérifier.
+
+| | Train complet | enveda-180 | Test visible |
+|---|---|---|---|
+| timsTOF | 45 % | 100 % | 100 % |
+| Adducts | 121 | 14 (29 % de dimères) | 7, tous simples |
+| Pics par spectre (médiane) | 42 | 138 | 230 |
+| Spectres de moins de 10 pics | 18 % | 4,5 % | 2 % |
+| Spectres par molécule (médiane, max) | 6, 1 468 | 6, 46 | 3, 9 |
+| Masse des molécules dans [246, 439] Da | 86 % | 99 % | 100 % |
+
+**Recommandations pour C (`build_queries`) :**
+1. Garder le split tel quel, mais rapporter deux scores : sur toute la validation, et sur des **requêtes « type test »** (spectres d'enveda-180 avec un adduct du test).
+2. Plafonner le nombre de spectres par requête en imitant le test : tirer, avec une graine fixe, un nombre de spectres suivant la distribution du test (1 à 9, médiane 3).
+3. Ne jamais évaluer sur le test visible : ses 400 molécules sont dans le train (368 dans notre split `train`, 32 dans `val`), et ses spectres sont des copies de spectres du train.
+
+**Pour le nettoyage (A1.4) et B :**
+4. Les spectres de moins de 10 pics et les adducts dimères ne ressemblent pas au test. Ce sont des candidats à écarter de l'entraînement, à tester en A4.1 plutôt qu'à supprimer d'office.
+5. Filtre par masse : timsTOF est très précis (99 % des erreurs sous 4,4 ppm). Une tolérance qui dépend de l'instrument est à tester.
+
+Détails : `notebooks/A/03_train_vs_test.ipynb`.
+
 ### Provisoire, en attendant A
 
 - **Chemins** : les données brutes sont lues dans le dossier donné par la variable d'environnement `CASMI_DATA_DIR` (à défaut, `kaggle/input/`), et les fichiers produits sont écrits dans son sous-dossier `processed/` (à défaut, `data/processed/`). À reprendre dans `config.py`.
